@@ -8,7 +8,7 @@ import argparse
 def checksum(source, hash):
     if hash == 'SHA256':
         hash_func = hashlib.sha256()
-    else:
+    elif hash == 'MD5':
         hash_func = hashlib.md5()        
 
     with open(source, "rb") as file:
@@ -52,7 +52,7 @@ def sync_folders(source, replica, hash):
                 os.remove(replica_item_path)
                 logging.info(f"Removed file: {replica_item_path}. There is no {item} file in the source.")
 
-def setup_logging(logfile_path, source, replica, hash):
+def setup_logging(logfile_path):
     # Setup logging to file and console.
     if os.path.isdir(logfile_path):
         logfile_path = os.path.join(logfile_path, "sync_folders.log")
@@ -63,9 +63,6 @@ def setup_logging(logfile_path, source, replica, hash):
                             logging.FileHandler(logfile_path),
                             logging.StreamHandler()
                         ])
-    logging.info(f"Source path: {source}")
-    logging.info(f"Replica path: {replica}")
-    logging.info(f"Hash function: {hash}")
 
 def main():
     # Command line argument parsing
@@ -74,21 +71,17 @@ def main():
     parser.add_argument('replica', help='Path to the replica directory')
     parser.add_argument('interval', type=int, help='Interval in seconds between each synchornization')
     parser.add_argument('log', help='Path where log file will be created')
-    parser.add_argument('-ha', '--hash', help="Hash function (MD5 / SHA256). Default MD5.")
-
+    parser.add_argument('-ha', '--hash', choices=['MD5', 'SHA256'], default='SHA256',
+                    help="Hash function (MD5 for speed, SHA256 for accuracy). Default is SHA256.")
     args = parser.parse_args()
-    
-    if args.hash is None:
-        hash = 'MD5'
-    else:
-        hash = args.hash
 
-    setup_logging(args.log, args.source, args.replica, hash)
+    setup_logging(args.log)
+    logging.info(f"Source path: {args.source}\nReplica path: {args.replica}\nHash function: {args.hash}")
 
     try:
         while True:
             logging.info("Starting folder synchronization...")
-            sync_folders(args.source, args.replica, hash)
+            sync_folders(args.source, args.replica, args.hash)
             logging.info("Synchronization completed. Waiting for the next interval...")
             time.sleep(args.interval)
     except KeyboardInterrupt:
